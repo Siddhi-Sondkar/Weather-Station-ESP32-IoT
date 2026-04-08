@@ -35,4 +35,4 @@ An IoT-based Weather Monitoring System designed to monitor environmental conditi
 
 ---
 
-## 📂 Project Structure
+

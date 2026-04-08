@@ -1,3 +1,10 @@
+/*
+Project: Weather Station using ESP32
+Author: Siddhi Sondkar
+Description: Monitors wind speed, rainfall, direction and sends Telegram alerts
+Note: Replace WiFi and Telegram credentials before running
+*/
+
 #include <WiFi.h>
 #include <HTTPClient.h>
 #include <Wire.h>
@@ -13,12 +20,12 @@ LiquidCrystal_I2C lcd(0x27, 16, 2);
 bool sdOK = false;
 
 /********** WiFi **********/
-const char* ssid = "Redmi Note 14 5G";
-const char* password = "Siddhi04";
+const char* ssid = "YOUR_WIFI_NAME";        // 🔴 Replace
+const char* password = "YOUR_WIFI_PASSWORD"; // 🔴 Replace
 
 /********** Telegram **********/
-String botToken = "8586929289:AAETtzxVRdqOaizWK-B30l2WSh3DXTTz2nU";
-String chatID   = "-5265686279";
+String botToken = "YOUR_BOT_TOKEN";   // 🔴 Replace
+String chatID   = "YOUR_CHAT_ID";     // 🔴 Replace
 
 /********** GPS **********/
 const char* gpsAPI = "http://ip-api.com/json";
@@ -31,7 +38,7 @@ String gpsLocation = "unknown";
 
 /********** Timing **********/
 #define SENSOR_INTERVAL     5000UL       
-#define TELEGRAM_INTERVAL   300000UL    // 5 minutes
+#define TELEGRAM_INTERVAL   300000UL    
 #define SD_INTERVAL         1800000UL   
 
 /********** Thresholds **********/
@@ -80,7 +87,8 @@ void sendTelegram(String msg) {
   if (WiFi.status() != WL_CONNECTED) return;
 
   HTTPClient http;
-  http.begin("https://api.telegram.org/bot" + botToken + "/sendMessage");
+  String url = "https://api.telegram.org/bot" + botToken + "/sendMessage";
+  http.begin(url);
   http.addHeader("Content-Type", "application/json");
 
   String body =
@@ -128,7 +136,7 @@ void logToSD(float ws, float rain, String dir) {
 /********** Weather Update **********/
 void sendWeatherUpdate(float ws, float rain, String dir) {
   String msg =
-    "WEATHER UPDATE\n"
+    "🌦 WEATHER UPDATE\n"
     "Wind: " + String(ws,1) + " m/s\n"
     "Rain: " + String(rain,2) + " mm\n"
     "Direction: " + dir + "\n"
@@ -141,12 +149,12 @@ void sendWeatherUpdate(float ws, float rain, String dir) {
 void checkAbnormality(float ws, float rainNow) {
 
   if (ws > WIND_ALERT_LIMIT && !windAlertSent) {
-    sendTelegram("🚨 ALERT: HIGH WIND\nWind speed: " + String(ws,1) + " m/s");
+    sendTelegram("🚨 HIGH WIND ALERT\nSpeed: " + String(ws,1) + " m/s");
     windAlertSent = true;
   }
 
   if (rainNow > RAIN_ALERT_LIMIT && !rainAlertSent) {
-    sendTelegram("🚨 ALERT: HEAVY RAIN\nRainfall: " + String(rainNow,2) + " mm");
+    sendTelegram("🚨 HEAVY RAIN ALERT\nRain: " + String(rainNow,2) + " mm");
     rainAlertSent = true;
   }
 }
@@ -154,7 +162,7 @@ void checkAbnormality(float ws, float rainNow) {
 /********** Setup **********/
 void setup() {
   Serial.begin(115200);
-  Serial.println("System Started");   // ✅ Debug line
+  Serial.println("System Started");
 
   Wire.begin(15, 16);
   lcd.init();
@@ -177,6 +185,7 @@ void setup() {
   }
 
   WiFi.begin(ssid, password);
+  Serial.print("Connecting WiFi");
   while (WiFi.status() != WL_CONNECTED) {
     delay(300);
     Serial.print(".");
@@ -184,8 +193,7 @@ void setup() {
   Serial.println("\nWiFi Connected");
 
   fetchGPS();
-
-  sendTelegram("Weather station online");
+  sendTelegram("✅ Weather station online");
 
   lcd.print("Weather Station");
   lcd.setCursor(0,1);
@@ -211,22 +219,14 @@ void loop() {
   float angle = map(analogRead(WIND_DIR_PIN), 0, 4095, 0, 360);
   String dir = directionName(angle);
 
-  // ✅ SERIAL OUTPUT (FIXED)
-  Serial.print("Wind Speed: ");
-  Serial.print(windSpeed);
-  Serial.print(" m/s | ");
-
-  Serial.print("Rainfall: ");
-  Serial.print(totalRainfall);
-  Serial.print(" mm | ");
-
-  Serial.print("Direction: ");
-  Serial.println(dir);
+  Serial.print("Wind: "); Serial.print(windSpeed);
+  Serial.print(" | Rain: "); Serial.print(totalRainfall);
+  Serial.print(" | Dir: "); Serial.println(dir);
 
   lcd.setCursor(0,0);
-  lcd.print("WD:" + dir + " WS:" + String(windSpeed,1) + " ");
+  lcd.print("WD:" + dir + " WS:" + String(windSpeed,1));
   lcd.setCursor(0,1);
-  lcd.print("Rain:" + String(totalRainfall,2) + " ");
+  lcd.print("Rain:" + String(totalRainfall,2));
 
   checkAbnormality(windSpeed, rainNow);
 
